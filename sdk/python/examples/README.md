@@ -25,6 +25,19 @@ python -m pip install openai-codex
 The SDK installs its pinned `openai-codex-cli-bin` runtime dependency.
 The pinned runtime version comes from the SDK package dependency.
 
+## Run examples
+
+After installing the published SDK, run any example with the same Python
+interpreter:
+
+```bash
+python examples/<example-folder>/sync.py
+python examples/<example-folder>/async.py
+```
+
+The examples are written as normal installed-package application code, so they
+can be copied into your own project without local repository import setup.
+
 ## Run From A Checkout
 
 Contributors using these checked-in scripts should install development
@@ -32,29 +45,29 @@ dependencies from `sdk/python`:
 
 ```bash
 uv sync --extra dev
-source .venv/bin/activate
 ```
 
-The examples bootstrap local SDK imports from `sdk/python/src`. If the pinned
-runtime is not already installed, the bootstrap installs the matching runtime
-package for the active interpreter and cleans up temporary files afterward.
-
-## Run examples
-
-From `sdk/python`:
+Then run examples through the synced environment:
 
 ```bash
-python examples/<example-folder>/sync.py
-python examples/<example-folder>/async.py
+uv run --extra dev python examples/<example-folder>/sync.py
+uv run --extra dev python examples/<example-folder>/async.py
 ```
 
-The checked-in examples use the local SDK source tree automatically.
-
 ## Recommended first run
+
+After installing the published SDK:
 
 ```bash
 python examples/01_quickstart_constructor/sync.py
 python examples/01_quickstart_constructor/async.py
+```
+
+From a checkout:
+
+```bash
+uv run --extra dev python examples/01_quickstart_constructor/sync.py
+uv run --extra dev python examples/01_quickstart_constructor/async.py
 ```
 
 ## Index

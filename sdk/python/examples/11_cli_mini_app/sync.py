@@ -1,14 +1,3 @@
-import sys
-from pathlib import Path
-
-_EXAMPLES_ROOT = Path(__file__).resolve().parents[1]
-if str(_EXAMPLES_ROOT) not in sys.path:
-    sys.path.insert(0, str(_EXAMPLES_ROOT))
-
-from _bootstrap import ensure_local_sdk_src, runtime_config
-
-ensure_local_sdk_src()
-
 from openai_codex import (
     Codex,
 )
@@ -16,8 +5,6 @@ from openai_codex.types import (
     ThreadTokenUsageUpdatedNotification,
     TurnCompletedNotification,
 )
-
-print("Codex mini CLI. Type /exit to quit.")
 
 
 def _format_usage(usage: object) -> str:
@@ -30,50 +17,57 @@ def _format_usage(usage: object) -> str:
     )
 
 
-with Codex(config=runtime_config()) as codex:
-    thread = codex.thread_start(model="gpt-5.4", config={"model_reasoning_effort": "high"})
-    print("Thread:", thread.id)
+def main() -> None:
+    print("Codex mini CLI. Type /exit to quit.")
 
-    while True:
-        try:
-            user_input = input("you> ").strip()
-        except EOFError:
-            break
+    with Codex() as codex:
+        thread = codex.thread_start(model="gpt-5.4", config={"model_reasoning_effort": "high"})
+        print("Thread:", thread.id)
 
-        if not user_input:
-            continue
-        if user_input in {"/exit", "/quit"}:
-            break
+        while True:
+            try:
+                user_input = input("you> ").strip()
+            except EOFError:
+                break
 
-        turn = thread.turn(user_input)
-        usage = None
-        status = None
-        error = None
-
-        print("assistant> ", end="", flush=True)
-        for event in turn.stream():
-            payload = event.payload
-            if event.method == "item/agentMessage/delta":
-                delta = payload.delta
-                if delta:
-                    print(delta, end="", flush=True)
+            if not user_input:
                 continue
-            if isinstance(payload, ThreadTokenUsageUpdatedNotification):
-                usage = payload.token_usage
-                continue
-            if isinstance(payload, TurnCompletedNotification):
-                status = payload.turn.status
-                error = payload.turn.error
+            if user_input in {"/exit", "/quit"}:
+                break
 
-        print()
-        if status is None:
-            raise RuntimeError("stream ended without turn/completed")
-        if usage is None:
-            raise RuntimeError("stream ended without token usage")
+            turn = thread.turn(user_input)
+            usage = None
+            status = None
+            error = None
 
-        status_text = status.value
-        print(f"assistant.status> {status_text}")
-        if status_text == "failed":
-            print("assistant.error>", error)
+            print("assistant> ", end="", flush=True)
+            for event in turn.stream():
+                payload = event.payload
+                if event.method == "item/agentMessage/delta":
+                    delta = payload.delta
+                    if delta:
+                        print(delta, end="", flush=True)
+                    continue
+                if isinstance(payload, ThreadTokenUsageUpdatedNotification):
+                    usage = payload.token_usage
+                    continue
+                if isinstance(payload, TurnCompletedNotification):
+                    status = payload.turn.status
+                    error = payload.turn.error
 
-        print(_format_usage(usage))
+            print()
+            if status is None:
+                raise RuntimeError("stream ended without turn/completed")
+            if usage is None:
+                raise RuntimeError("stream ended without token usage")
+
+            status_text = status.value
+            print(f"assistant.status> {status_text}")
+            if status_text == "failed":
+                print("assistant.error>", error)
+
+            print(_format_usage(usage))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,32 +1,39 @@
-import sys
+import base64
+import contextlib
+import tempfile
 from pathlib import Path
-
-_EXAMPLES_ROOT = Path(__file__).resolve().parents[1]
-if str(_EXAMPLES_ROOT) not in sys.path:
-    sys.path.insert(0, str(_EXAMPLES_ROOT))
-
-from _bootstrap import (
-    ensure_local_sdk_src,
-    runtime_config,
-    temporary_sample_image_path,
-)
-
-ensure_local_sdk_src()
+from typing import Iterator
 
 from openai_codex import Codex, LocalImageInput, TextInput
 
-with temporary_sample_image_path() as image_path:
-    with Codex(config=runtime_config()) as codex:
-        thread = codex.thread_start(model="gpt-5.4", config={"model_reasoning_effort": "high"})
+SAMPLE_IMAGE_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAIUlEQVR4nGOo2PIfjv7fiYIjBipKRG2Jh6MtoaFwREUJAMtncrF3OVI0AAAAAElFTkSuQmCC"
 
-        result = thread.turn(
-            [
-                TextInput(
-                    "Read this generated local image and summarize the colors/layout in 2 bullets."
-                ),
-                LocalImageInput(str(image_path.resolve())),
-            ]
-        ).run()
 
-        print("Status:", result.status)
-        print(result.final_response)
+@contextlib.contextmanager
+def _temporary_sample_image_path() -> Iterator[Path]:
+    with tempfile.TemporaryDirectory(prefix="codex-python-example-image-") as temp_root:
+        image_path = Path(temp_root) / "generated_sample.png"
+        image_path.write_bytes(base64.b64decode(SAMPLE_IMAGE_PNG))
+        yield image_path
+
+
+def main() -> None:
+    with _temporary_sample_image_path() as image_path:
+        with Codex() as codex:
+            thread = codex.thread_start(model="gpt-5.4", config={"model_reasoning_effort": "high"})
+
+            result = thread.turn(
+                [
+                    TextInput(
+                        "Read this generated local image and summarize the colors/layout in 2 bullets."
+                    ),
+                    LocalImageInput(str(image_path.resolve())),
+                ]
+            ).run()
+
+            print("Status:", result.status)
+            print(result.final_response)
+
+
+if __name__ == "__main__":
+    main()

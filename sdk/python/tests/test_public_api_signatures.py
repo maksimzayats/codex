@@ -129,6 +129,10 @@ def _assert_no_any_annotations(fn: object) -> None:
         raise AssertionError(f"{fn} has public return annotation typed as Any")
 
 
+def _examples_root() -> Path:
+    return Path(__file__).resolve().parents[1] / "examples"
+
+
 def test_root_exports_codex_config() -> None:
     """The root package should expose the process configuration object."""
     assert CodexConfig.__name__ == "CodexConfig"
@@ -292,22 +296,46 @@ def test_types_star_import_matches_public_types() -> None:
     assert exported == set(EXPECTED_TYPES_EXPORTS)
 
 
-def test_examples_use_public_import_surfaces() -> None:
-    """Examples should teach users the public root and type-module imports only."""
-    examples_root = Path(__file__).resolve().parents[1] / "examples"
-    private_import_markers = [
+def test_examples_use_public_import_surfaces_without_checkout_bootstrap() -> None:
+    """Examples should be copy-pasteable installed-SDK code."""
+    examples_root = _examples_root()
+    forbidden_markers = [
         "openai_codex.api",
         "openai_codex.client",
         "openai_codex.generated",
         "openai_codex.models",
         "openai_codex.retry",
+        "sys.path",
+        "_bootstrap",
+        "ensure_local_sdk_src",
+        "runtime_config",
+        "Codex(config=",
+        "AsyncCodex(config=",
     ]
 
     offenders = {
         str(path.relative_to(examples_root)): marker
         for path in examples_root.rglob("*.py")
-        for marker in private_import_markers
+        for marker in forbidden_markers
         if marker in path.read_text()
+    }
+
+    assert offenders == {}
+
+
+def test_sync_examples_are_import_safe() -> None:
+    """Sync examples should not do network/runtime work when imported."""
+    examples_root = _examples_root()
+    required_markers = [
+        "def main() -> None:",
+        'if __name__ == "__main__":\n    main()',
+    ]
+
+    offenders = {
+        str(path.relative_to(examples_root)): marker
+        for path in examples_root.glob("*/sync.py")
+        for marker in required_markers
+        if marker not in path.read_text()
     }
 
     assert offenders == {}
