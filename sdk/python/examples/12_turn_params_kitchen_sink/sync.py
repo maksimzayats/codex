@@ -1,14 +1,4 @@
 import json
-import sys
-from pathlib import Path
-
-_EXAMPLES_ROOT = Path(__file__).resolve().parents[1]
-if str(_EXAMPLES_ROOT) not in sys.path:
-    sys.path.insert(0, str(_EXAMPLES_ROOT))
-
-from _bootstrap import ensure_local_sdk_src, runtime_config
-
-ensure_local_sdk_src()
 
 from openai_codex import (
     Codex,
@@ -38,38 +28,44 @@ PROMPT = (
     "Return JSON matching the requested schema."
 )
 
-with Codex(config=runtime_config()) as codex:
-    thread = codex.thread_start(model="gpt-5.4", config={"model_reasoning_effort": "high"})
 
-    turn = thread.turn(
-        PROMPT,
-        output_schema=OUTPUT_SCHEMA,
-        personality=Personality.pragmatic,
-        summary=SUMMARY,
-    )
-    result = turn.run()
-    structured_text = result.final_response.strip()
-    try:
-        structured = json.loads(structured_text)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(
-            f"Expected JSON matching OUTPUT_SCHEMA, got: {structured_text!r}"
-        ) from exc
+def main() -> None:
+    with Codex() as codex:
+        thread = codex.thread_start(model="gpt-5.4", config={"model_reasoning_effort": "high"})
 
-    summary = structured["summary"]
-    actions = structured["actions"]
-    if (
-        not isinstance(summary, str)
-        or not isinstance(actions, list)
-        or not all(isinstance(action, str) for action in actions)
-    ):
-        raise RuntimeError(
-            f"Expected structured output with string summary/actions, got: {structured!r}"
+        turn = thread.turn(
+            PROMPT,
+            output_schema=OUTPUT_SCHEMA,
+            personality=Personality.pragmatic,
+            summary=SUMMARY,
         )
+        result = turn.run()
+        structured_text = result.final_response.strip()
+        try:
+            structured = json.loads(structured_text)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                f"Expected JSON matching OUTPUT_SCHEMA, got: {structured_text!r}"
+            ) from exc
 
-    print("Status:", result.status)
-    print("summary:", summary)
-    print("actions:")
-    for action in actions:
-        print("-", action)
-    print("Items:", len(result.items))
+        summary = structured["summary"]
+        actions = structured["actions"]
+        if (
+            not isinstance(summary, str)
+            or not isinstance(actions, list)
+            or not all(isinstance(action, str) for action in actions)
+        ):
+            raise RuntimeError(
+                f"Expected structured output with string summary/actions, got: {structured!r}"
+            )
+
+        print("Status:", result.status)
+        print("summary:", summary)
+        print("actions:")
+        for action in actions:
+            print("-", action)
+        print("Items:", len(result.items))
+
+
+if __name__ == "__main__":
+    main()

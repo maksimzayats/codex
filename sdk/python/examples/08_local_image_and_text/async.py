@@ -1,26 +1,26 @@
-import sys
-from pathlib import Path
-
-_EXAMPLES_ROOT = Path(__file__).resolve().parents[1]
-if str(_EXAMPLES_ROOT) not in sys.path:
-    sys.path.insert(0, str(_EXAMPLES_ROOT))
-
-from _bootstrap import (
-    ensure_local_sdk_src,
-    runtime_config,
-    temporary_sample_image_path,
-)
-
-ensure_local_sdk_src()
-
 import asyncio
+import base64
+import contextlib
+import tempfile
+from pathlib import Path
+from typing import Iterator
 
 from openai_codex import AsyncCodex, LocalImageInput, TextInput
 
+SAMPLE_IMAGE_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAIUlEQVR4nGOo2PIfjv7fiYIjBipKRG2Jh6MtoaFwREUJAMtncrF3OVI0AAAAAElFTkSuQmCC"
+
+
+@contextlib.contextmanager
+def _temporary_sample_image_path() -> Iterator[Path]:
+    with tempfile.TemporaryDirectory(prefix="codex-python-example-image-") as temp_root:
+        image_path = Path(temp_root) / "generated_sample.png"
+        image_path.write_bytes(base64.b64decode(SAMPLE_IMAGE_PNG))
+        yield image_path
+
 
 async def main() -> None:
-    with temporary_sample_image_path() as image_path:
-        async with AsyncCodex(config=runtime_config()) as codex:
+    with _temporary_sample_image_path() as image_path:
+        async with AsyncCodex() as codex:
             thread = await codex.thread_start(
                 model="gpt-5.4", config={"model_reasoning_effort": "high"}
             )

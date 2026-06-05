@@ -1,24 +1,23 @@
-import sys
-from pathlib import Path
-
-_EXAMPLES_ROOT = Path(__file__).resolve().parents[1]
-if str(_EXAMPLES_ROOT) not in sys.path:
-    sys.path.insert(0, str(_EXAMPLES_ROOT))
-
-from _bootstrap import (
-    ensure_local_sdk_src,
-    runtime_config,
-    server_label,
-)
-
-ensure_local_sdk_src()
-
 from openai_codex import Codex
+from openai_codex.types import InitializeResponse
 
-with Codex(config=runtime_config()) as codex:
-    print("Server:", server_label(codex.metadata))
 
-    thread = codex.thread_start(model="gpt-5.4", config={"model_reasoning_effort": "high"})
-    result = thread.run("Say hello in one sentence.")
-    print("Items:", len(result.items))
-    print("Text:", result.final_response)
+def _server_label(metadata: InitializeResponse) -> str:
+    server = metadata.serverInfo
+    if server is None:
+        return "unknown"
+    return " ".join(part for part in (server.name, server.version) if part) or "unknown"
+
+
+def main() -> None:
+    with Codex() as codex:
+        print("Server:", _server_label(codex.metadata))
+
+        thread = codex.thread_start(model="gpt-5.4", config={"model_reasoning_effort": "high"})
+        result = thread.run("Say hello in one sentence.")
+        print("Items:", len(result.items))
+        print("Text:", result.final_response)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,13 +1,4 @@
-import sys
 from pathlib import Path
-
-_EXAMPLES_ROOT = Path(__file__).resolve().parents[1]
-if str(_EXAMPLES_ROOT) not in sys.path:
-    sys.path.insert(0, str(_EXAMPLES_ROOT))
-
-from _bootstrap import ensure_local_sdk_src, runtime_config
-
-ensure_local_sdk_src()
 
 from openai_codex import (
     Codex,
@@ -65,38 +56,44 @@ OUTPUT_SCHEMA = {
     "additionalProperties": False,
 }
 
-with Codex(config=runtime_config()) as codex:
-    models = codex.models(include_hidden=True)
-    selected_model = _pick_highest_model(models.data)
-    selected_effort = _pick_highest_turn_effort(selected_model)
 
-    print("selected.model:", selected_model.model)
-    print("selected.effort:", selected_effort.value)
+def main() -> None:
+    with Codex() as codex:
+        models = codex.models(include_hidden=True)
+        selected_model = _pick_highest_model(models.data)
+        selected_effort = _pick_highest_turn_effort(selected_model)
 
-    thread = codex.thread_start(
-        model=selected_model.model,
-        config={"model_reasoning_effort": selected_effort.value},
-    )
+        print("selected.model:", selected_model.model)
+        print("selected.effort:", selected_effort.value)
 
-    first = thread.turn(
-        "Give one short sentence about reliable production releases.",
-        model=selected_model.model,
-        effort=selected_effort,
-    ).run()
+        thread = codex.thread_start(
+            model=selected_model.model,
+            config={"model_reasoning_effort": selected_effort.value},
+        )
 
-    print("agent.message:", first.final_response)
-    print("items:", len(first.items))
+        first = thread.turn(
+            "Give one short sentence about reliable production releases.",
+            model=selected_model.model,
+            effort=selected_effort,
+        ).run()
 
-    second = thread.turn(
-        "Return JSON for a safe feature-flag rollout plan.",
-        cwd=str(Path.cwd()),
-        effort=selected_effort,
-        model=selected_model.model,
-        output_schema=OUTPUT_SCHEMA,
-        personality=Personality.pragmatic,
-        sandbox=Sandbox.read_only,
-        summary=ReasoningSummary.model_validate("concise"),
-    ).run()
+        print("agent.message:", first.final_response)
+        print("items:", len(first.items))
 
-    print("agent.message.params:", second.final_response)
-    print("items.params:", len(second.items))
+        second = thread.turn(
+            "Return JSON for a safe feature-flag rollout plan.",
+            cwd=str(Path.cwd()),
+            effort=selected_effort,
+            model=selected_model.model,
+            output_schema=OUTPUT_SCHEMA,
+            personality=Personality.pragmatic,
+            sandbox=Sandbox.read_only,
+            summary=ReasoningSummary.model_validate("concise"),
+        ).run()
+
+        print("agent.message.params:", second.final_response)
+        print("items.params:", len(second.items))
+
+
+if __name__ == "__main__":
+    main()

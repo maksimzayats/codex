@@ -158,7 +158,7 @@ the repository:
 ```bash
 cd sdk/python
 uv sync --extra dev
-source .venv/bin/activate
+uv run --extra dev python examples/01_quickstart_constructor/sync.py
 ```
 
 ## Next Stops
